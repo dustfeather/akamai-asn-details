@@ -1,0 +1,54 @@
+name: Release Extension
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: Create Chrome extension package
+      run: |
+        cd extension
+        zip -r ../akamai-asn-details-chrome.zip . -x "*.xpi" "*.zip"
+        
+    - name: Create Firefox extension package
+      run: |
+        cd extension
+        # Create web-ext config for Firefox
+        cat > web-ext-config.json << EOF
+        {
+          "sourceDir": ".",
+          "artifactsDir": "../",
+          "filename": "akamai-asn-details-firefox.xpi"
+        }
+        EOF
+        
+        # Install web-ext if not available
+        npm install -g web-ext
+        
+        # Build Firefox XPI
+        web-ext build --config web-ext-config.json
+        
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          akamai-asn-details-chrome.zip
+          akamai-asn-details-firefox.xpi
+        generate_release_notes: true
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

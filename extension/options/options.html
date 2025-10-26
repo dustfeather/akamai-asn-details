@@ -1,0 +1,48 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WSA ASN Radar Tooltip – Options</title>
+  <link rel="stylesheet" href="options.css">
+  <style>
+    /* Fallback minimal styles if CSS fails to load */
+    body{font:14px/1.5 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:24px;color:#111}
+  </style>
+</head>
+<body>
+  <h1>WSA ASN Radar Tooltip – Options</h1>
+  <section class="card">
+    <h2>Cloudflare Radar API</h2>
+    <label>
+      <span>API Token</span>
+      <input id="token" type="password" placeholder="Paste your Cloudflare API token" autocomplete="off" />
+    </label>
+    <label>
+      <span>Base URL</span>
+      <input id="baseUrl" type="text" placeholder="https://api.cloudflare.com/client/v4/radar" />
+    </label>
+    <label class="row">
+      <span>Cache TTL (days)</span>
+      <input id="ttlDays" type="number" min="1" step="1" />
+    </label>
+    <div class="actions">
+      <button id="save">Save</button>
+      <span id="status" class="muted"></span>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Help</h2>
+    <ul>
+      <li>Open the Akamai WSA dashboard: <code>https://control.akamai.com/apps/security-analytics/#/</code></li>
+      <li>Hover an ASN in the table to view human vs bot percentage tooltip.</li>
+    </ul>
+  </section>
+
+  <script src="../vendor/browser-polyfill.min.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>
+
+

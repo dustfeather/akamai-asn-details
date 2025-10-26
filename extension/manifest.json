@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "WSA ASN Radar Tooltip",
+  "version": "0.1.0",
+  "description": "Shows Cloudflare Radar human vs bot percentages for ASNs on Akamai WSA dashboard.",
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "https://control.akamai.com/*",
+    "https://api.cloudflare.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "options_ui": {
+    "page": "options/options.html",
+    "open_in_tab": true
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://control.akamai.com/*"],
+      "js": ["vendor/browser-polyfill.min.js", "content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
+
+
