@@ -26,20 +26,11 @@ jobs:
     - name: Create Firefox extension package
       run: |
         cd extension
-        # Create web-ext config for Firefox
-        cat > web-ext-config.json << EOF
-        {
-          "sourceDir": ".",
-          "artifactsDir": "../",
-          "filename": "akamai-asn-details-firefox.xpi"
-        }
-        EOF
+        # Install web-ext with specific version to avoid Node.js compatibility issues
+        npm install -g web-ext@7.8.0
         
-        # Install web-ext if not available
-        npm install -g web-ext
-        
-        # Build Firefox XPI
-        web-ext build --config web-ext-config.json
+        # Build Firefox XPI directly without config file
+        web-ext build --source-dir . --artifacts-dir ../ --filename akamai-asn-details-firefox.xpi
         
     - name: Create Release
       uses: softprops/action-gh-release@v1
