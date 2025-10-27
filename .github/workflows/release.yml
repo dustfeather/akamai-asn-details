@@ -115,40 +115,14 @@ jobs:
         
         echo "✅ All build artifacts verified"
         
-    - name: Check if release exists
-      id: check_release
-      run: |
-        TAG_NAME=${GITHUB_REF#refs/tags/}
-        echo "Checking for existing release with tag: $TAG_NAME"
-        
-        if gh release view "$TAG_NAME" >/dev/null 2>&1; then
-          echo "exists=true" >> $GITHUB_OUTPUT
-          echo "Release $TAG_NAME already exists"
-        else
-          echo "exists=false" >> $GITHUB_OUTPUT
-          echo "No existing release found for tag $TAG_NAME"
-        fi
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        
-    - name: Delete existing release
-      if: steps.check_release.outputs.exists == 'true'
-      run: |
-        TAG_NAME=${GITHUB_REF#refs/tags/}
-        echo "Deleting existing release: $TAG_NAME"
-        gh release delete "$TAG_NAME" --yes
-        echo "✅ Successfully deleted existing release"
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        
-    - name: Create Release
+    - name: Create Draft Release
       uses: softprops/action-gh-release@v2
       with:
         files: |
           akamai-asn-details-chrome.zip
           akamai-asn-details-firefox.xpi
         generate_release_notes: true
-        draft: false
+        draft: true
         prerelease: false
         fail_on_unmatched_files: false
         make_latest: true
@@ -165,14 +139,50 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         
+    - name: Publish Release
+      run: |
+        TAG_NAME=${GITHUB_REF#refs/tags/}
+        echo "Publishing draft release for tag: $TAG_NAME"
+        
+        # Small delay to ensure release is fully created
+        sleep 2
+        
+        # Get the release ID
+        RELEASE_RESPONSE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+          "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/tags/$TAG_NAME")
+        
+        RELEASE_ID=$(echo "$RELEASE_RESPONSE" | jq -r '.id')
+        
+        if [ "$RELEASE_ID" = "null" ] || [ -z "$RELEASE_ID" ]; then
+          echo "❌ Failed to get release ID"
+          exit 1
+        fi
+        
+        echo "Release ID: $RELEASE_ID"
+        
+        # Publish the release
+        curl -X PATCH \
+          -H "Authorization: token $GITHUB_TOKEN" \
+          -H "Accept: application/vnd.github.v3+json" \
+          -d '{"draft": false}' \
+          "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID"
+        
+        echo "✅ Successfully published release $TAG_NAME"
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
     - name: Verify release creation
       run: |
         TAG_NAME=${GITHUB_REF#refs/tags/}
         echo "Verifying release creation for tag: $TAG_NAME"
         
-        if gh release view "$TAG_NAME" >/dev/null 2>&1; then
+        # Check if release exists and is published
+        RELEASE_RESPONSE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+          "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/tags/$TAG_NAME")
+        
+        if echo "$RELEASE_RESPONSE" | grep -q '"id"'; then
           echo "✅ Release $TAG_NAME created successfully"
-          gh release view "$TAG_NAME" --json name,url,assets
+          echo "$RELEASE_RESPONSE" | jq -r '.name, .html_url, .assets[].name'
         else
           echo "❌ Failed to create release $TAG_NAME"
           exit 1
