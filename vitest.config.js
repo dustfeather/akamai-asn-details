@@ -15,7 +15,7 @@ export default defineConfig({
       }
     },
     include: ['**/*.test.js'],
-    exclude: ['node_modules/**', 'extension/vendor/**'],
+    exclude: ['node_modules/**', 'extension/vendor/**', 'tests/integration/**'],
     // Override environment for integration tests
     testTimeout: 30000,
     coverage: {

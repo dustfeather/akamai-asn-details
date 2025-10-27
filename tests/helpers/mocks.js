@@ -1,6 +1,8 @@
 // Chrome API mocks for testing browser extension functionality
 // These mocks simulate the chrome.storage and chrome.runtime APIs
 
+import { vi } from 'vitest'
+
 export function createChromeMocks() {
   const storage = {
     local: {
