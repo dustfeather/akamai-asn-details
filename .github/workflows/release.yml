@@ -28,8 +28,44 @@ jobs:
     - name: Run unit tests
       run: npm run test:unit
       
+    - name: Run integration tests
+      run: npm run test:integration
+      env:
+        CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      
     - name: Run E2E tests
       run: npm run test:e2e
+      env:
+        CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        
+    - name: Validate Cloudflare API connectivity
+      run: |
+        if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+          echo "❌ CLOUDFLARE_API_TOKEN is not set"
+          exit 1
+        fi
+        
+        echo "🔍 Testing Cloudflare API connectivity..."
+        
+        # Test API endpoint with a known ASN (Cloudflare's own ASN)
+        response=$(curl -s -w "%{http_code}" -o /tmp/api_response.json \
+          -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+          -H "Accept: application/json" \
+          "https://api.cloudflare.com/client/v4/radar/entities/asns/AS13335/http/summary")
+        
+        http_code="${response: -3}"
+        
+        if [ "$http_code" = "200" ]; then
+          echo "✅ Cloudflare API is accessible and responding correctly"
+          echo "📊 API Response sample:"
+          head -c 200 /tmp/api_response.json
+          echo ""
+        else
+          echo "❌ Cloudflare API returned HTTP $http_code"
+          echo "📄 Response:"
+          cat /tmp/api_response.json
+          exit 1
+        fi
       env:
         CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 

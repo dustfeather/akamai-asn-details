@@ -1,5 +1,9 @@
 import { defineConfig } from 'vitest/config'
 import { playwright } from '@vitest/browser-playwright'
+import { config } from 'dotenv'
+
+// Load environment variables from .env file
+config()
 
 export default defineConfig({
   test: {
@@ -12,6 +16,8 @@ export default defineConfig({
     },
     include: ['**/*.test.js'],
     exclude: ['node_modules/**', 'extension/vendor/**'],
+    // Override environment for integration tests
+    testTimeout: 30000,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

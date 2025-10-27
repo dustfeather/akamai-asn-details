@@ -54,12 +54,27 @@ The project includes comprehensive automated testing using Vitest and Puppeteer.
 
 3. **Run specific test suites:**
    ```bash
-   npm run test:unit    # Unit tests only
-   npm run test:e2e    # End-to-end tests only
-   npm run test:coverage # Tests with coverage report
+   npm run test:unit       # Unit tests only
+   npm run test:integration # Integration tests with real Cloudflare API
+   npm run test:e2e        # End-to-end tests only
+   npm run test:coverage   # Tests with coverage report
    ```
 
 4. **Set up Cloudflare API token for E2E tests:**
+   
+   **Option A: Using .env file (recommended for local development):**
+   ```bash
+   # Copy the example file
+   cp .env.example .env
+   
+   # Edit .env and add your actual token
+   # CLOUDFLARE_API_TOKEN=your-actual-token-here
+   
+   # Run tests (will automatically load from .env)
+   npm run test:e2e
+   ```
+   
+   **Option B: Using environment variable:**
    ```bash
    export CLOUDFLARE_API_TOKEN="your-token-here"
    npm run test:e2e
@@ -68,6 +83,7 @@ The project includes comprehensive automated testing using Vitest and Puppeteer.
 ### Test Structure
 
 - `tests/unit/` - Unit tests for helper functions (ASN parsing, storage, etc.)
+- `tests/integration/` - Integration tests with real Cloudflare API calls
 - `tests/e2e/` - End-to-end browser tests using Puppeteer
 - `tests/helpers/` - Test utilities and mocks
 
@@ -87,3 +103,4 @@ To set up the secret:
 ## Development
 - Source lives in `extension/` and uses Manifest V3 with a background service worker.
 - No build step required; pure JavaScript.
+- For local testing, create a `.env` file with your `CLOUDFLARE_API_TOKEN` (see `.env.example` for template).
