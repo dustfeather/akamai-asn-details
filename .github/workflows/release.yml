@@ -115,59 +115,64 @@ jobs:
         
         echo "✅ All build artifacts verified"
         
-    - name: Create Draft Release
-      uses: softprops/action-gh-release@v2
-      with:
-        files: |
-          akamai-asn-details-chrome.zip
-          akamai-asn-details-firefox.xpi
-        generate_release_notes: true
-        draft: true
-        prerelease: false
-        fail_on_unmatched_files: false
-        make_latest: true
-        body: |
-          ## Release ${{ github.ref_name }}
-          
-          This release includes:
-          - Chrome extension package (akamai-asn-details-chrome.zip)
-          - Firefox extension package (akamai-asn-details-firefox.xpi)
-          
-          ### Installation
-          - **Chrome**: Download the .zip file and load as unpacked extension
-          - **Firefox**: Download the .xpi file and install as temporary add-on
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        
-    - name: Publish Release
+    - name: Create Release with Assets
       run: |
         TAG_NAME=${GITHUB_REF#refs/tags/}
-        echo "Publishing draft release for tag: $TAG_NAME"
+        echo "Creating release for tag: $TAG_NAME"
         
-        # Small delay to ensure release is fully created
-        sleep 2
+        # Create the release using GitHub API
+        RELEASE_DATA='{
+          "tag_name": "'$TAG_NAME'",
+          "name": "Release '$TAG_NAME'",
+          "body": "## Release '$TAG_NAME'\n\nThis release includes:\n- Chrome extension package (akamai-asn-details-chrome.zip)\n- Firefox extension package (akamai-asn-details-firefox.xpi)\n\n### Installation\n- **Chrome**: Download the .zip file and load as unpacked extension\n- **Firefox**: Download the .xpi file and install as temporary add-on",
+          "draft": false,
+          "prerelease": false
+        }'
         
-        # Get the release ID
-        RELEASE_RESPONSE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
-          "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/tags/$TAG_NAME")
+        echo "Creating release..."
+        RELEASE_RESPONSE=$(curl -X POST \
+          -H "Authorization: token $GITHUB_TOKEN" \
+          -H "Accept: application/vnd.github.v3+json" \
+          -d "$RELEASE_DATA" \
+          "https://api.github.com/repos/$GITHUB_REPOSITORY/releases")
         
+        echo "Release creation response:"
+        echo "$RELEASE_RESPONSE"
+        
+        # Extract release ID
         RELEASE_ID=$(echo "$RELEASE_RESPONSE" | jq -r '.id')
         
         if [ "$RELEASE_ID" = "null" ] || [ -z "$RELEASE_ID" ]; then
-          echo "❌ Failed to get release ID"
+          echo "❌ Failed to create release"
+          echo "Response: $RELEASE_RESPONSE"
           exit 1
         fi
         
-        echo "Release ID: $RELEASE_ID"
+        echo "✅ Release created with ID: $RELEASE_ID"
         
-        # Publish the release
-        curl -X PATCH \
+        # Upload Chrome extension
+        echo "Uploading Chrome extension..."
+        CHROME_UPLOAD_RESPONSE=$(curl -X POST \
           -H "Authorization: token $GITHUB_TOKEN" \
-          -H "Accept: application/vnd.github.v3+json" \
-          -d '{"draft": false}' \
-          "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID"
+          -H "Content-Type: application/zip" \
+          --data-binary @akamai-asn-details-chrome.zip \
+          "https://uploads.github.com/repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID/assets?name=akamai-asn-details-chrome.zip")
         
-        echo "✅ Successfully published release $TAG_NAME"
+        echo "Chrome upload response:"
+        echo "$CHROME_UPLOAD_RESPONSE"
+        
+        # Upload Firefox extension
+        echo "Uploading Firefox extension..."
+        FIREFOX_UPLOAD_RESPONSE=$(curl -X POST \
+          -H "Authorization: token $GITHUB_TOKEN" \
+          -H "Content-Type: application/zip" \
+          --data-binary @akamai-asn-details-firefox.xpi \
+          "https://uploads.github.com/repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID/assets?name=akamai-asn-details-firefox.xpi")
+        
+        echo "Firefox upload response:"
+        echo "$FIREFOX_UPLOAD_RESPONSE"
+        
+        echo "✅ Release and assets uploaded successfully"
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         
@@ -176,15 +181,18 @@ jobs:
         TAG_NAME=${GITHUB_REF#refs/tags/}
         echo "Verifying release creation for tag: $TAG_NAME"
         
-        # Check if release exists and is published
+        # Check if release exists and has assets
         RELEASE_RESPONSE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
           "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/tags/$TAG_NAME")
         
         if echo "$RELEASE_RESPONSE" | grep -q '"id"'; then
           echo "✅ Release $TAG_NAME created successfully"
-          echo "$RELEASE_RESPONSE" | jq -r '.name, .html_url, .assets[].name'
+          echo "Release URL: $(echo "$RELEASE_RESPONSE" | jq -r '.html_url')"
+          echo "Assets:"
+          echo "$RELEASE_RESPONSE" | jq -r '.assets[] | "  - \(.name) (\(.size) bytes)"'
         else
-          echo "❌ Failed to create release $TAG_NAME"
+          echo "❌ Failed to verify release $TAG_NAME"
+          echo "Response: $RELEASE_RESPONSE"
           exit 1
         fi
       env:
