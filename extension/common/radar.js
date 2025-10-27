@@ -220,7 +220,9 @@ Attaches wsarRadar to globalThis
   }
 
   globalThis.wsarRadar = {
-    fetchAsnBotHumanBreakdown: fetchAsnBotHumanBreakdown
+    fetchAsnBotHumanBreakdown: fetchAsnBotHumanBreakdown,
+    normalizeAsn: normalizeAsn,
+    tryParseBotHumanFromUnknown: tryParseBotHumanFromUnknown
   };
 })();
 

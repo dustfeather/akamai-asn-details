@@ -39,24 +39,44 @@ describe('Radar Module', () => {
   })
 
   describe('normalizeAsn', () => {
-    it('should normalize ASN with AS prefix', async () => {
-      const result = await radarModule.fetchAsnBotHumanBreakdown('AS13335')
-      expect(result).toBeDefined()
+    it('should normalize ASN with AS prefix', () => {
+      const result = radarModule.normalizeAsn('AS13335')
+      expect(result).toBe('13335')
     })
 
-    it('should normalize ASN without AS prefix', async () => {
-      const result = await radarModule.fetchAsnBotHumanBreakdown('13335')
-      expect(result).toBeDefined()
+    it('should normalize ASN without AS prefix', () => {
+      const result = radarModule.normalizeAsn('13335')
+      expect(result).toBe('13335')
     })
 
-    it('should handle empty ASN', async () => {
-      const result = await radarModule.fetchAsnBotHumanBreakdown('')
-      expect(result).toBeDefined()
+    it('should handle ASN with lowercase as prefix', () => {
+      const result = radarModule.normalizeAsn('as13335')
+      expect(result).toBe('13335')
     })
 
-    it('should handle null ASN', async () => {
-      const result = await radarModule.fetchAsnBotHumanBreakdown(null)
-      expect(result).toBeDefined()
+    it('should handle ASN with mixed case', () => {
+      const result = radarModule.normalizeAsn('As13335')
+      expect(result).toBe('13335')
+    })
+
+    it('should handle empty ASN', () => {
+      const result = radarModule.normalizeAsn('')
+      expect(result).toBe('')
+    })
+
+    it('should handle null ASN', () => {
+      const result = radarModule.normalizeAsn(null)
+      expect(result).toBe('')
+    })
+
+    it('should handle undefined ASN', () => {
+      const result = radarModule.normalizeAsn(undefined)
+      expect(result).toBe('')
+    })
+
+    it('should trim whitespace', () => {
+      const result = radarModule.normalizeAsn('  AS13335  ')
+      expect(result).toBe('13335')
     })
   })
 
@@ -142,48 +162,84 @@ describe('Radar Module', () => {
   })
 
   describe('tryParseBotHumanFromUnknown', () => {
-    it('should parse response with human/bot percentages', () => {
-      // Mock all API calls to fail
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: false,
-        status: 400,
-        text: () => Promise.resolve('Bad Request')
+    it('should parse response with human/bot percentages in 0-1 range', () => {
+      const result = radarModule.tryParseBotHumanFromUnknown({
+        human: 0.75,
+        bot: 0.25
       })
-
-      return radarModule.fetchAsnBotHumanBreakdown('AS13335').then(result => {
-        expect(result.humanPct).toBeNull()
-        expect(result.botPct).toBeNull()
-        expect(result.error).toContain('Unable to retrieve ASN-specific data')
+      
+      expect(result).toEqual({
+        humanPct: 75,
+        botPct: 25
       })
     })
 
-    it('should handle percentage values in 0-100 range', () => {
-      // Mock all API calls to fail
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: false,
-        status: 400,
-        text: () => Promise.resolve('Bad Request')
+    it('should parse response with human/bot percentages in 0-100 range', () => {
+      const result = radarModule.tryParseBotHumanFromUnknown({
+        humanPercentage: 80,
+        botPercentage: 20
       })
-
-      return radarModule.fetchAsnBotHumanBreakdown('AS13335').then(result => {
-        expect(result.humanPct).toBeNull()
-        expect(result.botPct).toBeNull()
-        expect(result.error).toContain('Unable to retrieve ASN-specific data')
+      
+      expect(result).toEqual({
+        humanPct: 80,
+        botPct: 20
       })
     })
 
     it('should calculate missing percentage from the other', () => {
-      // Mock all API calls to fail
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: false,
-        status: 400,
-        text: () => Promise.resolve('Bad Request')
+      const result = radarModule.tryParseBotHumanFromUnknown({
+        human: 0.60
+        // bot percentage missing
       })
+      
+      expect(result).toEqual({
+        humanPct: 60,
+        botPct: 40 // Should be calculated as 100 - 60
+      })
+    })
 
-      return radarModule.fetchAsnBotHumanBreakdown('AS13335').then(result => {
-        expect(result.humanPct).toBeNull()
-        expect(result.botPct).toBeNull()
-        expect(result.error).toContain('Unable to retrieve ASN-specific data')
+    it('should handle nested object structures', () => {
+      const result = radarModule.tryParseBotHumanFromUnknown({
+        traffic: {
+          breakdown: {
+            humanTraffic: 0.85,
+            botTraffic: 0.15
+          }
+        }
+      })
+      
+      expect(result).toEqual({
+        humanPct: 85,
+        botPct: 15
+      })
+    })
+
+    it('should return null for invalid data', () => {
+      const result = radarModule.tryParseBotHumanFromUnknown(null)
+      expect(result).toBeNull()
+    })
+
+    it('should return null for non-object data', () => {
+      const result = radarModule.tryParseBotHumanFromUnknown('invalid')
+      expect(result).toBeNull()
+    })
+
+    it('should return null when no percentages found', () => {
+      const result = radarModule.tryParseBotHumanFromUnknown({
+        someOtherData: 'value'
+      })
+      expect(result).toBeNull()
+    })
+
+    it('should clamp percentages to valid range', () => {
+      const result = radarModule.tryParseBotHumanFromUnknown({
+        human: 150, // Should be clamped to 100
+        bot: -10    // Should be clamped to 0
+      })
+      
+      expect(result).toEqual({
+        humanPct: 100, // 150 > 100, so clamped to 100
+        botPct: 0      // -10 < 0, so clamped to 0
       })
     })
   })

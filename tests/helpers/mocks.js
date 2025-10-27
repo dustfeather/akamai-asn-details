@@ -85,8 +85,57 @@ export function createFetchMock() {
   const originalFetch = global.fetch;
   
   const mockFetch = vi.fn((url, options) => {
-    // Mock Cloudflare Radar API responses
+    // Mock Cloudflare Radar API responses for different endpoints
     if (url.includes('api.cloudflare.com/client/v4/radar')) {
+      // Mock speed data endpoint
+      if (url.includes('/quality/speed/top/ases')) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({
+            result: [
+              {
+                asn: 13335,
+                bandwidth: 80,
+                latency: 20
+              }
+            ]
+          })
+        });
+      }
+      
+      // Mock traffic data endpoint
+      if (url.includes('/netflows/summary')) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({
+            result: [
+              {
+                asn: 13335,
+                requests: 1000,
+                uniqueIps: 800
+              }
+            ]
+          })
+        });
+      }
+      
+      // Mock entity data endpoint
+      if (url.includes('/entities/asns/')) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({
+            result: {
+              type: 'isp',
+              name: 'Test ISP'
+            }
+          })
+        });
+      }
+      
+      // Default response for other radar endpoints
       return Promise.resolve({
         ok: true,
         status: 200,
