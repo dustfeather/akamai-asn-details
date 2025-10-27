@@ -5,7 +5,7 @@ import { setupChromeMocks, resetChromeMocks } from '../helpers/mocks.js'
 let storageModule
 
 describe('Storage Module', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     const mocks = setupChromeMocks()
     
     // Load the storage module by evaluating the file

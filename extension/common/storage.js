@@ -52,6 +52,7 @@ Attaches wsarStorage to globalThis
   async function getFresh(key, maxAgeMs) {
     var wrapped = await getCachedRaw(key);
     if (!wrapped || typeof wrapped !== 'object') return null;
+    if (maxAgeMs <= 0) return null;  // Zero or negative TTL should always return null
     var fetchedAt = wrapped.fetchedAt || 0;
     if (Date.now() - fetchedAt > maxAgeMs) return null;
     return wrapped.data;

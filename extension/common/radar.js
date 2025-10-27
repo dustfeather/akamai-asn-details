@@ -70,9 +70,11 @@ Attaches wsarRadar to globalThis
     });
     if (!resp.ok) {
       var text = await resp.text();
-      var e = new Error('Radar API error: ' + resp.status + ' ' + text);
-      e.code = 'RADAR_HTTP_' + resp.status;
-      throw e;
+      return { 
+        humanPct: null, 
+        botPct: null, 
+        error: 'Radar API error: ' + resp.status + ' ' + text 
+      };
     }
     var json = await resp.json();
 
@@ -81,11 +83,13 @@ Attaches wsarRadar to globalThis
     if (json && json.result) parsed = tryParseBotHumanFromUnknown(json.result);
     if (!parsed) parsed = tryParseBotHumanFromUnknown(json);
     if (!parsed) {
-      var e2 = new Error('Could not parse Radar response for bot/human breakdown');
-      e2.code = 'PARSE_ERROR';
-      throw e2;
+      return { 
+        humanPct: null, 
+        botPct: null, 
+        error: 'Could not parse Radar response for bot/human breakdown' 
+      };
     }
-    return parsed;
+    return { ...parsed, error: null };
   }
 
   globalThis.wsarRadar = {

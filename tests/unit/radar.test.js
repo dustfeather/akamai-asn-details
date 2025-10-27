@@ -6,7 +6,7 @@ import { setupChromeMocks, resetChromeMocks, createFetchMock, resetFetchMock } f
 let radarModule
 
 describe('Radar Module', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     setupChromeMocks()
     createFetchMock()
     
