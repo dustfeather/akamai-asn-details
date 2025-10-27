@@ -137,3 +137,6 @@ The extension is ready for publishing on both Chrome Web Store and Firefox Add-o
 - Source lives in `extension/` and uses Manifest V3 with a background service worker.
 - No build step required; pure JavaScript.
 - For local testing, create a `.env` file with your `CLOUDFLARE_API_TOKEN` (see `.env.example` for template).
+
+## Future Enhancements
+See [NEXT.md](NEXT.md) for planned improvements including advanced caching, additional data sources, and performance optimizations.
