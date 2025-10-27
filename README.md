@@ -83,9 +83,11 @@ The project includes comprehensive automated testing using Vitest and Puppeteer.
 ### Test Structure
 
 - `tests/unit/` - Unit tests for helper functions (ASN parsing, storage, etc.)
-- `tests/integration/` - Integration tests with real Cloudflare API calls
+- `tests/integration/` - Integration tests with real Cloudflare API calls (uses valid endpoints like `/ranking/top`)
 - `tests/e2e/` - End-to-end browser tests using Puppeteer
 - `tests/helpers/` - Test utilities and mocks
+
+**Note**: The extension now uses multiple Cloudflare Radar API endpoints to derive ASN-specific bot/human traffic estimates. It tries three approaches: speed data analysis, traffic pattern analysis, and ASN entity type analysis. If ASN-specific data is not available, users will see an appropriate error message.
 
 ### CI/CD
 

@@ -52,11 +52,11 @@ jobs:
         
         echo "🔍 Testing Cloudflare API connectivity..."
         
-        # Test API endpoint with a known ASN (Cloudflare's own ASN)
+        # Test API endpoint with a valid Radar endpoint
         response=$(curl -s -w "%{http_code}" -o /tmp/api_response.json \
           -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
           -H "Accept: application/json" \
-          "https://api.cloudflare.com/client/v4/radar/entities/asns/AS13335/http/summary")
+          "https://api.cloudflare.com/client/v4/radar/ranking/top")
         
         http_code="${response: -3}"
         
