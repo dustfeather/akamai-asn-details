@@ -36,6 +36,54 @@ Shows Cloudflare Radar human vs bot percentages for ASNs hovered on Akamai WSA d
 - Errors show a "No data" tooltip and are cached briefly.
 - Extension works without a token but shows configuration instructions.
 
+## Testing
+
+The project includes comprehensive automated testing using Vitest and Puppeteer.
+
+### Running Tests Locally
+
+1. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+
+2. **Run all tests:**
+   ```bash
+   npm test
+   ```
+
+3. **Run specific test suites:**
+   ```bash
+   npm run test:unit    # Unit tests only
+   npm run test:e2e    # End-to-end tests only
+   npm run test:coverage # Tests with coverage report
+   ```
+
+4. **Set up Cloudflare API token for E2E tests:**
+   ```bash
+   export CLOUDFLARE_API_TOKEN="your-token-here"
+   npm run test:e2e
+   ```
+
+### Test Structure
+
+- `tests/unit/` - Unit tests for helper functions (ASN parsing, storage, etc.)
+- `tests/e2e/` - End-to-end browser tests using Puppeteer
+- `tests/helpers/` - Test utilities and mocks
+
+### CI/CD
+
+Tests run automatically on every push and pull request via GitHub Actions. The release workflow requires all tests to pass before creating a new release.
+
+**Required GitHub Secret:**
+- `CLOUDFLARE_API_TOKEN` - Your Cloudflare API token for E2E testing
+
+To set up the secret:
+1. Go to your repository Settings → Secrets and variables → Actions
+2. Click "New repository secret"
+3. Name: `CLOUDFLARE_API_TOKEN`
+4. Value: Your Cloudflare API token
+
 ## Development
 - Source lives in `extension/` and uses Manifest V3 with a background service worker.
 - No build step required; pure JavaScript.

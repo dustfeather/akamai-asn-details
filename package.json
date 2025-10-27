@@ -1,0 +1,31 @@
+{
+  "name": "akamai-asn-details",
+  "version": "0.1.0",
+  "description": "Shows Cloudflare Radar human vs bot percentages for ASNs on Akamai WSA dashboard.",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:unit": "vitest run tests/unit",
+    "test:e2e": "vitest run tests/e2e",
+    "test:coverage": "vitest run --coverage",
+    "test:watch": "vitest",
+    "dev": "vitest"
+  },
+  "devDependencies": {
+    "vitest": "^2.1.8",
+    "@vitest/browser": "^2.1.8",
+    "puppeteer": "^23.9.0",
+    "happy-dom": "^15.11.6",
+    "@vitest/coverage-v8": "^2.1.8"
+  },
+  "keywords": [
+    "browser-extension",
+    "akamai",
+    "cloudflare",
+    "radar",
+    "asn",
+    "security-analytics"
+  ],
+  "author": "",
+  "license": "MIT"
+}
