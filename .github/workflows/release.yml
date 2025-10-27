@@ -96,6 +96,51 @@ jobs:
         # Build Firefox XPI directly without config file
         web-ext build --source-dir . --artifacts-dir ../ --filename akamai-asn-details-firefox.xpi
         
+    - name: Verify build artifacts
+      run: |
+        echo "Verifying build artifacts..."
+        ls -la *.zip *.xpi
+        echo "File sizes:"
+        du -h *.zip *.xpi
+        
+        if [ ! -f "akamai-asn-details-chrome.zip" ]; then
+          echo "❌ Chrome extension package not found!"
+          exit 1
+        fi
+        
+        if [ ! -f "akamai-asn-details-firefox.xpi" ]; then
+          echo "❌ Firefox extension package not found!"
+          exit 1
+        fi
+        
+        echo "✅ All build artifacts verified"
+        
+    - name: Check if release exists
+      id: check_release
+      run: |
+        TAG_NAME=${GITHUB_REF#refs/tags/}
+        echo "Checking for existing release with tag: $TAG_NAME"
+        
+        if gh release view "$TAG_NAME" >/dev/null 2>&1; then
+          echo "exists=true" >> $GITHUB_OUTPUT
+          echo "Release $TAG_NAME already exists"
+        else
+          echo "exists=false" >> $GITHUB_OUTPUT
+          echo "No existing release found for tag $TAG_NAME"
+        fi
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Delete existing release
+      if: steps.check_release.outputs.exists == 'true'
+      run: |
+        TAG_NAME=${GITHUB_REF#refs/tags/}
+        echo "Deleting existing release: $TAG_NAME"
+        gh release delete "$TAG_NAME" --yes
+        echo "✅ Successfully deleted existing release"
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
     - name: Create Release
       uses: softprops/action-gh-release@v2
       with:
@@ -105,5 +150,32 @@ jobs:
         generate_release_notes: true
         draft: false
         prerelease: false
+        fail_on_unmatched_files: false
+        make_latest: true
+        body: |
+          ## Release ${{ github.ref_name }}
+          
+          This release includes:
+          - Chrome extension package (akamai-asn-details-chrome.zip)
+          - Firefox extension package (akamai-asn-details-firefox.xpi)
+          
+          ### Installation
+          - **Chrome**: Download the .zip file and load as unpacked extension
+          - **Firefox**: Download the .xpi file and install as temporary add-on
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Verify release creation
+      run: |
+        TAG_NAME=${GITHUB_REF#refs/tags/}
+        echo "Verifying release creation for tag: $TAG_NAME"
+        
+        if gh release view "$TAG_NAME" >/dev/null 2>&1; then
+          echo "✅ Release $TAG_NAME created successfully"
+          gh release view "$TAG_NAME" --json name,url,assets
+        else
+          echo "❌ Failed to create release $TAG_NAME"
+          exit 1
+        fi
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
