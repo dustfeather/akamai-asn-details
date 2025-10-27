@@ -10,7 +10,13 @@
     "test:integration": "vitest run --config vitest.integration.config.js",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
-    "dev": "vitest"
+    "dev": "vitest",
+    "build": "node -e \"process.platform === 'win32' ? require('child_process').execSync('scripts\\\\build.bat', {stdio: 'inherit'}) : require('child_process').execSync('bash scripts/build.sh', {stdio: 'inherit'})\"",
+    "package": "node -e \"process.platform === 'win32' ? require('child_process').execSync('scripts\\\\package.bat', {stdio: 'inherit'}) : require('child_process').execSync('bash scripts/package.sh', {stdio: 'inherit'})\"",
+    "build:chrome": "npm run build && echo 'Chrome build ready in dist/chrome/'",
+    "build:firefox": "npm run build && echo 'Firefox build ready in dist/firefox/'",
+    "package:chrome": "npm run build && npm run package && echo 'Chrome package ready: packages/chrome-extension.zip'",
+    "package:firefox": "npm run build && npm run package && echo 'Firefox package ready: packages/firefox-extension.zip'"
   },
   "devDependencies": {
     "@vitest/browser": "^4.0.4",

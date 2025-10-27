@@ -108,6 +108,31 @@ To set up the secret:
 3. Name: `CLOUDFLARE_API_TOKEN`
 4. Value: Your Cloudflare API token
 
+## Publishing
+
+The extension is ready for publishing on both Chrome Web Store and Firefox Add-ons marketplace.
+
+### Quick Start
+
+1. **Build the extension:**
+   ```bash
+   npm run build
+   ```
+
+2. **Create packages:**
+   ```bash
+   npm run package
+   ```
+
+3. **Follow the publishing guide:**
+   See [PUBLISHING.md](PUBLISHING.md) for complete instructions.
+
+### Store Assets
+
+- Store listings: `store-assets/`
+- Privacy policy: [PRIVACY.md](PRIVACY.md)
+- Publishing guide: [PUBLISHING.md](PUBLISHING.md)
+
 ## Development
 - Source lives in `extension/` and uses Manifest V3 with a background service worker.
 - No build step required; pure JavaScript.
