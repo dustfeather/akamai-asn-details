@@ -1,3 +1,9 @@
+## Prerequisites
+
+- Node.js 20+ (required for coverage testing)
+- npm or yarn
+- Chrome or Firefox browser for testing
+
 ## WSA ASN Radar Tooltip
 
 Shows Cloudflare Radar human vs bot percentages for ASNs hovered on Akamai WSA dashboard.
