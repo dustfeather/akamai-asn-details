@@ -52,9 +52,12 @@ Attaches wsarRadar to globalThis
     var token = await (globalThis.wsarStorage && globalThis.wsarStorage.getSetting('radarToken', ''));
     var baseUrl = await (globalThis.wsarStorage && globalThis.wsarStorage.getSetting('radarBaseUrl', 'https://api.cloudflare.com/client/v4/radar'));
     if (!token) {
-      var err = new Error('Cloudflare Radar token not set. Configure it in the extension options.');
-      err.code = 'NO_TOKEN';
-      throw err;
+      // Return graceful error instead of throwing
+      return { 
+        humanPct: null, 
+        botPct: null, 
+        error: 'Cloudflare Radar token not configured. Please set your API token in extension options to view bot/human traffic data.' 
+      };
     }
     var asnNum = normalizeAsn(asn);
     var url = baseUrl.replace(/\/$/, '') + '/entities/asns/' + encodeURIComponent(asnNum) + '/http/summary';

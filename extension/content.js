@@ -89,6 +89,12 @@
     }
   }
 
+  function showTooltipError(errorMessage) {
+    ensureTooltip();
+    tooltipEl.textContent = errorMessage;
+    tooltipEl.classList.add('muted');
+  }
+
   function hideTooltip() {
     if (!tooltipRoot) return;
     tooltipRoot.style.transform = 'translate(-9999px,-9999px)';
@@ -132,7 +138,13 @@
       if (!activeHover || activeHover.asn !== asn) return; // stale
       var human = resp && typeof resp.humanPct === 'number' ? resp.humanPct : null;
       var bot = resp && typeof resp.botPct === 'number' ? resp.botPct : null;
-      showTooltipData(human, bot);
+      var error = resp && resp.error ? resp.error : null;
+      
+      if (error) {
+        showTooltipError(error);
+      } else {
+        showTooltipData(human, bot);
+      }
       if (activeHover && activeHover.lastPos) positionTooltip(activeHover.lastPos.x, activeHover.lastPos.y);
     });
   }
