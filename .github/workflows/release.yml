@@ -121,6 +121,47 @@ jobs:
         TAG_NAME=${GITHUB_REF#refs/tags/}
         echo "Creating release for tag: $TAG_NAME"
         
+        # Check if a release already exists for this tag (GitHub auto-creates releases)
+        echo "Checking for existing release..."
+        EXISTING_RELEASE=$(curl -s -w "\n%{http_code}" \
+          -H "Authorization: token $GITHUB_TOKEN" \
+          -H "Accept: application/vnd.github.v3+json" \
+          "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/tags/$TAG_NAME")
+        
+        EXISTING_HTTP_CODE=$(echo "$EXISTING_RELEASE" | tail -n1)
+        EXISTING_BODY=$(echo "$EXISTING_RELEASE" | sed '$d')
+        
+        if [ "$EXISTING_HTTP_CODE" = "200" ]; then
+          EXISTING_RELEASE_ID=$(echo "$EXISTING_BODY" | jq -r '.id')
+          if [ "$EXISTING_RELEASE_ID" != "null" ] && [ -n "$EXISTING_RELEASE_ID" ]; then
+            echo "⚠️  Release already exists for tag $TAG_NAME (ID: $EXISTING_RELEASE_ID)"
+            echo "Deleting existing release to allow asset uploads..."
+            
+            DELETE_RESPONSE=$(curl -s -w "\n%{http_code}" -X DELETE \
+              -H "Authorization: token $GITHUB_TOKEN" \
+              -H "Accept: application/vnd.github.v3+json" \
+              "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/$EXISTING_RELEASE_ID")
+            
+            DELETE_HTTP_CODE=$(echo "$DELETE_RESPONSE" | tail -n1)
+            
+            if [ "$DELETE_HTTP_CODE" != "204" ]; then
+              echo "❌ Failed to delete existing release. HTTP status: $DELETE_HTTP_CODE"
+              echo "Response: $(echo "$DELETE_RESPONSE" | sed '$d')"
+              exit 1
+            fi
+            
+            echo "✅ Existing release deleted successfully"
+            # Wait a moment for GitHub to process the deletion
+            sleep 2
+          fi
+        elif [ "$EXISTING_HTTP_CODE" != "404" ]; then
+          echo "⚠️  Unexpected response when checking for existing release. HTTP status: $EXISTING_HTTP_CODE"
+          echo "Response: $EXISTING_BODY"
+          # Continue anyway - might be a network issue
+        else
+          echo "✅ No existing release found for tag $TAG_NAME"
+        fi
+        
         # Create the release using GitHub API
         RELEASE_DATA='{
           "tag_name": "'$TAG_NAME'",
