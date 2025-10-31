@@ -117,6 +117,7 @@ jobs:
         
     - name: Create Release with Assets
       run: |
+        set -e
         TAG_NAME=${GITHUB_REF#refs/tags/}
         echo "Creating release for tag: $TAG_NAME"
         
@@ -130,21 +131,31 @@ jobs:
         }'
         
         echo "Creating release..."
-        RELEASE_RESPONSE=$(curl -X POST \
+        RELEASE_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
           -H "Authorization: token $GITHUB_TOKEN" \
           -H "Accept: application/vnd.github.v3+json" \
           -d "$RELEASE_DATA" \
           "https://api.github.com/repos/$GITHUB_REPOSITORY/releases")
         
+        RELEASE_HTTP_CODE=$(echo "$RELEASE_RESPONSE" | tail -n1)
+        RELEASE_BODY=$(echo "$RELEASE_RESPONSE" | sed '$d')
+        
+        echo "Release creation HTTP status: $RELEASE_HTTP_CODE"
         echo "Release creation response:"
-        echo "$RELEASE_RESPONSE"
+        echo "$RELEASE_BODY"
+        
+        if [ "$RELEASE_HTTP_CODE" != "201" ]; then
+          echo "❌ Failed to create release. HTTP status: $RELEASE_HTTP_CODE"
+          echo "Response: $RELEASE_BODY"
+          exit 1
+        fi
         
         # Extract release ID
-        RELEASE_ID=$(echo "$RELEASE_RESPONSE" | jq -r '.id')
+        RELEASE_ID=$(echo "$RELEASE_BODY" | jq -r '.id')
         
         if [ "$RELEASE_ID" = "null" ] || [ -z "$RELEASE_ID" ]; then
-          echo "❌ Failed to create release"
-          echo "Response: $RELEASE_RESPONSE"
+          echo "❌ Failed to extract release ID"
+          echo "Response: $RELEASE_BODY"
           exit 1
         fi
         
@@ -152,32 +163,56 @@ jobs:
         
         # Upload Chrome extension
         echo "Uploading Chrome extension..."
-        CHROME_UPLOAD_RESPONSE=$(curl -X POST \
+        CHROME_UPLOAD_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
           -H "Authorization: token $GITHUB_TOKEN" \
           -H "Content-Type: application/zip" \
           --data-binary @akamai-asn-details-chrome.zip \
           "https://uploads.github.com/repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID/assets?name=akamai-asn-details-chrome.zip")
         
+        CHROME_HTTP_CODE=$(echo "$CHROME_UPLOAD_RESPONSE" | tail -n1)
+        CHROME_BODY=$(echo "$CHROME_UPLOAD_RESPONSE" | sed '$d')
+        
+        echo "Chrome upload HTTP status: $CHROME_HTTP_CODE"
         echo "Chrome upload response:"
-        echo "$CHROME_UPLOAD_RESPONSE"
+        echo "$CHROME_BODY"
+        
+        if [ "$CHROME_HTTP_CODE" != "201" ]; then
+          echo "❌ Failed to upload Chrome extension. HTTP status: $CHROME_HTTP_CODE"
+          echo "Response: $CHROME_BODY"
+          exit 1
+        fi
+        
+        echo "✅ Chrome extension uploaded successfully"
         
         # Upload Firefox extension
         echo "Uploading Firefox extension..."
-        FIREFOX_UPLOAD_RESPONSE=$(curl -X POST \
+        FIREFOX_UPLOAD_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
           -H "Authorization: token $GITHUB_TOKEN" \
           -H "Content-Type: application/zip" \
           --data-binary @akamai-asn-details-firefox.xpi \
           "https://uploads.github.com/repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID/assets?name=akamai-asn-details-firefox.xpi")
         
-        echo "Firefox upload response:"
-        echo "$FIREFOX_UPLOAD_RESPONSE"
+        FIREFOX_HTTP_CODE=$(echo "$FIREFOX_UPLOAD_RESPONSE" | tail -n1)
+        FIREFOX_BODY=$(echo "$FIREFOX_UPLOAD_RESPONSE" | sed '$d')
         
+        echo "Firefox upload HTTP status: $FIREFOX_HTTP_CODE"
+        echo "Firefox upload response:"
+        echo "$FIREFOX_BODY"
+        
+        if [ "$FIREFOX_HTTP_CODE" != "201" ]; then
+          echo "❌ Failed to upload Firefox extension. HTTP status: $FIREFOX_HTTP_CODE"
+          echo "Response: $FIREFOX_BODY"
+          exit 1
+        fi
+        
+        echo "✅ Firefox extension uploaded successfully"
         echo "✅ Release and assets uploaded successfully"
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         
     - name: Verify release creation
       run: |
+        set -e
         TAG_NAME=${GITHUB_REF#refs/tags/}
         echo "Verifying release creation for tag: $TAG_NAME"
         
@@ -185,15 +220,39 @@ jobs:
         RELEASE_RESPONSE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
           "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/tags/$TAG_NAME")
         
-        if echo "$RELEASE_RESPONSE" | grep -q '"id"'; then
-          echo "✅ Release $TAG_NAME created successfully"
-          echo "Release URL: $(echo "$RELEASE_RESPONSE" | jq -r '.html_url')"
-          echo "Assets:"
-          echo "$RELEASE_RESPONSE" | jq -r '.assets[] | "  - \(.name) (\(.size) bytes)"'
-        else
+        if ! echo "$RELEASE_RESPONSE" | grep -q '"id"'; then
           echo "❌ Failed to verify release $TAG_NAME"
           echo "Response: $RELEASE_RESPONSE"
           exit 1
         fi
+        
+        echo "✅ Release $TAG_NAME created successfully"
+        echo "Release URL: $(echo "$RELEASE_RESPONSE" | jq -r '.html_url')"
+        
+        # Check for required assets
+        ASSET_COUNT=$(echo "$RELEASE_RESPONSE" | jq -r '.assets | length')
+        echo "Found $ASSET_COUNT asset(s) attached to release"
+        
+        if [ "$ASSET_COUNT" -lt 2 ]; then
+          echo "❌ Expected at least 2 assets (Chrome zip and Firefox xpi), but found $ASSET_COUNT"
+          exit 1
+        fi
+        
+        # Verify specific assets exist
+        CHROME_ASSET=$(echo "$RELEASE_RESPONSE" | jq -r '.assets[] | select(.name == "akamai-asn-details-chrome.zip") | .name')
+        FIREFOX_ASSET=$(echo "$RELEASE_RESPONSE" | jq -r '.assets[] | select(.name == "akamai-asn-details-firefox.xpi") | .name')
+        
+        if [ -z "$CHROME_ASSET" ]; then
+          echo "❌ Chrome extension (akamai-asn-details-chrome.zip) not found in release assets"
+          exit 1
+        fi
+        
+        if [ -z "$FIREFOX_ASSET" ]; then
+          echo "❌ Firefox extension (akamai-asn-details-firefox.xpi) not found in release assets"
+          exit 1
+        fi
+        
+        echo "✅ All required assets found:"
+        echo "$RELEASE_RESPONSE" | jq -r '.assets[] | "  - \(.name) (\(.size) bytes)"'
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
