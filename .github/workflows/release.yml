@@ -162,16 +162,37 @@ jobs:
           echo "✅ No existing release found for tag $TAG_NAME"
         fi
         
-        # Create the release using GitHub API
+        # Verify deletion completed - check multiple times if needed
+        echo "Verifying deletion completed..."
+        for i in 1 2 3; do
+          CHECK_RELEASE=$(curl -s -w "\n%{http_code}" \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/tags/$TAG_NAME")
+          
+          CHECK_HTTP_CODE=$(echo "$CHECK_RELEASE" | tail -n1)
+          
+          if [ "$CHECK_HTTP_CODE" = "404" ]; then
+            echo "✅ Confirmed release is deleted (attempt $i)"
+            break
+          elif [ $i -eq 3 ]; then
+            echo "⚠️  Release still exists after deletion attempts, but continuing..."
+          else
+            echo "⏳ Release still exists, waiting... (attempt $i)"
+            sleep 3
+          fi
+        done
+        
+        # Create the release as DRAFT first to allow asset uploads
         RELEASE_DATA='{
           "tag_name": "'$TAG_NAME'",
           "name": "Release '$TAG_NAME'",
           "body": "## Release '$TAG_NAME'\n\nThis release includes:\n- Chrome extension package (akamai-asn-details-chrome.zip)\n- Firefox extension package (akamai-asn-details-firefox.xpi)\n\n### Installation\n- **Chrome**: Download the .zip file and load as unpacked extension\n- **Firefox**: Download the .xpi file and install as temporary add-on",
-          "draft": false,
+          "draft": true,
           "prerelease": false
         }'
         
-        echo "Creating release..."
+        echo "Creating draft release..."
         RELEASE_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
           -H "Authorization: token $GITHUB_TOKEN" \
           -H "Accept: application/vnd.github.v3+json" \
@@ -200,7 +221,7 @@ jobs:
           exit 1
         fi
         
-        echo "✅ Release created with ID: $RELEASE_ID"
+        echo "✅ Draft release created with ID: $RELEASE_ID"
         
         # Upload Chrome extension
         echo "Uploading Chrome extension..."
@@ -247,6 +268,31 @@ jobs:
         fi
         
         echo "✅ Firefox extension uploaded successfully"
+        
+        # Publish the draft release
+        echo "Publishing release..."
+        PUBLISH_DATA='{
+          "draft": false
+        }'
+        
+        PUBLISH_RESPONSE=$(curl -s -w "\n%{http_code}" -X PATCH \
+          -H "Authorization: token $GITHUB_TOKEN" \
+          -H "Accept: application/vnd.github.v3+json" \
+          -d "$PUBLISH_DATA" \
+          "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID")
+        
+        PUBLISH_HTTP_CODE=$(echo "$PUBLISH_RESPONSE" | tail -n1)
+        PUBLISH_BODY=$(echo "$PUBLISH_RESPONSE" | sed '$d')
+        
+        echo "Publish HTTP status: $PUBLISH_HTTP_CODE"
+        
+        if [ "$PUBLISH_HTTP_CODE" != "200" ]; then
+          echo "❌ Failed to publish release. HTTP status: $PUBLISH_HTTP_CODE"
+          echo "Response: $PUBLISH_BODY"
+          exit 1
+        fi
+        
+        echo "✅ Release published successfully"
         echo "✅ Release and assets uploaded successfully"
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
